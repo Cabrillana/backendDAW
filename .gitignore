@@ -1,0 +1,3 @@
+#Carpetas ignoradas por Git
+/node_modules
+/dist
