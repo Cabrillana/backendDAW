@@ -9,12 +9,12 @@ class NotaRoutes {
 
   private config() {
     this.router.route("/")
-        .get(notasController.index)
-        .post(notasController.create);
+      .get(notasController.index)
+      .put(notasController.update)
+      .post(notasController.create);
     this.router.route("/:id")
-        .get(notasController.read)
-        .put(notasController.update)
-        .delete(notasController.delete);
+      .get(notasController.read)
+      .delete(notasController.delete);
   }
 }
 const notasRoutes = new NotaRoutes();
