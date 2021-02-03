@@ -1,6 +1,7 @@
 import express from "express";
-import notaRoutes from "./routes/nota.routes";
 import cors from "cors";
+import notaRoutes from "./routes/nota.routes";
+import userRoutes from "./routes/user.routes";
 
 class Server {
   public app: express.Application;
@@ -19,6 +20,7 @@ class Server {
 
   private routes(): void {
     this.app.use('/notas', notaRoutes);
+    this.app.use('/user', userRoutes);
   }
 
   start(): void {
