@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { notasController } from "../controllers/notas.controller";
+import { notasUser } from "../middlewares/nota.middleware";
 
 class NotaRoutes {
   public router: Router = Router();
@@ -9,12 +10,13 @@ class NotaRoutes {
 
   private config() {
     this.router.route("/")
-      .get(notasController.index)
-      .put(notasController.update)
-      .post(notasController.create);
+      .get([notasUser],notasController.index)
+      .put([notasUser],notasController.update)
+      .post([notasUser],notasController.create);
     this.router.route("/:id")
-      .get(notasController.read)
-      .delete(notasController.delete);
+      .get([notasUser],notasController.read)
+      .delete([notasUser],notasController.delete);
+
   }
 }
 const notasRoutes = new NotaRoutes();

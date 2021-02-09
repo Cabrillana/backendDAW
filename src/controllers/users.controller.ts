@@ -1,18 +1,18 @@
 import { Request, Response } from "express";
 import { DestroyOptions, Op, UpdateOptions } from "sequelize";
-import { UserLoginInterface, User, UserCreateInterface, UserUpdateInterface } from "../models/user.model";
+import { UserLoginInterface, User, UserCreateInterface, UserUpdateInterface, UserReadInterface } from "../models/user.model";
 import { sign } from "jsonwebtoken"
-import * as bcrypt from "bcryptjs";
+import { compare, genSaltSync, hashSync } from "bcryptjs";
 import { claveToken } from "../config/claveJWT";
-const salt = bcrypt.genSaltSync(10);
-const expire = "2d";
+const salt = genSaltSync(10);
+const expira = "2d";
 
 class UsersController {
 
   public readPerfil(req: Request, res: Response) {
     const userId: string = req.body.idJWT;
-    User.findByPk<User>(userId)
-      .then((user:User | null) => {
+    User.findByPk<User>(userId,{ attributes: UserReadInterface})
+      .then((user: User | null) => {
         if(user) res.json(user)
         else res.status(404)
           .json({ errors: "No se ha encontrado el user con id=" + userId });
@@ -21,19 +21,19 @@ class UsersController {
   }
 
   public readUser(req: Request, res: Response) {
-    const params: UserLoginInterface = req.body;
-    const condition = {email: params.email};
-    const attributes = ['id','password'];
+    const parametros: UserLoginInterface = req.body;
+    const condicion = {email: parametros.email};
+    const atributos = ['id','password'];
 
-    User.findOne<User>({where: condition, attributes: attributes})
+    User.findOne<User>({where: condicion, attributes: atributos})
       .then((user:User | null) => {
         if(user) {
-          bcrypt.compare(params.password, user.password, (err,success) => {
+          compare(parametros.password, user.password, (err,success) => {
             if(success) {
               const accessToken = sign(
                 { id: user.id }, 
                 claveToken, 
-                {expiresIn: expire}
+                {expiresIn: expira}
               );
               res.json(accessToken);
             } else res.status(401)
@@ -47,16 +47,16 @@ class UsersController {
   }
 
   public createUser(req: Request, res: Response) {
-    let params: UserCreateInterface = req.body;
-    params.password = bcrypt.hashSync(params.password, salt);
+    let parametros: UserCreateInterface = req.body;
+    parametros.password = hashSync(parametros.password, salt);
 
-    User.findOrCreate<User>({where: {email: params.email},defaults: params})
+    User.findOrCreate<User>({where: {email: parametros.email}, defaults: parametros})
       .then(([user, estado]) => {
         if(estado) {
           const accessToken = sign(
             { id: user.id },
             claveToken, 
-            {expiresIn:expire}
+            {expiresIn: expira}
           );
           res.status(201).json(accessToken);
         }
@@ -70,7 +70,6 @@ class UsersController {
     let parametros: UserUpdateInterface = req.body;
     let nUsers:number = 2;
 
-    if(parametros.password) parametros.password = bcrypt.hashSync(parametros.password, salt);
     if(parametros.email) {
       const condicion = { [Op.or] : [{ id: userId } , { email: parametros.email } ] };
       const atributo = ['id'];
@@ -82,10 +81,14 @@ class UsersController {
     } else nUsers = 1;
 
     if(nUsers != 2){
+      if(parametros.password?.length==0)
+        delete parametros.password
+      if(parametros.password)
+        parametros.password = hashSync(parametros.password, salt);
       const actualiza: UpdateOptions = {
         where: { id: userId }, limit: 1,
       };
-      User.update(parametros, actualiza)
+      User.update(parametros, actualiza,)
       .then(() => res.status(200)
         .json({ data: "Se ha actualizado el usuario con id=" + userId }))
       .catch((err: Error) => {
@@ -98,7 +101,7 @@ class UsersController {
   }
 
   public delete(req: Request, res: Response) {
-    const userId: string = req.body.idver;
+    const userId: string = req.body.idJWT;
     const elimina: DestroyOptions = {
       where: { id: userId }, limit: 1,
     };

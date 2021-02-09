@@ -4,11 +4,15 @@ import { Nota, NotaInterface } from "../models/nota.model";
 
 class NotasController {
   public index(req: Request, res: Response) {
-    const busqueda = req.query.busqueda;
-    const condicion = busqueda ? { [Op.or]: [{titulo: { [Op.like]: `%${busqueda}%` } },
-      { contenido: { [Op.like]: `%${busqueda}%` } }] } : undefined;
+    const filtro = req.query.busqueda;
+    const userId = req.body.idUser;
 
-    Nota.findAll<Nota>({where: condicion})
+    const eval1 = filtro ? { [Op.or]: [{titulo: { [Op.like]: `%${filtro}%` } },
+      { contenido: { [Op.like]: `%${filtro}%` } }] } : undefined;
+    const eval2 = userId ? { idUser: { [Op.or]: [userId,null] } } : { idUser: null };
+    const eval3 = eval1 ? {[Op.and]: [eval1,eval2]} : eval2
+
+    Nota.findAll<Nota>({where: eval3})
       .then((notas: Array<Nota>) => res.json(notas))
       .catch((err: Error) => res.status(500).json(err));
   }
@@ -34,29 +38,43 @@ class NotasController {
 
   public update(req: Request, res: Response) {
     const notaId: string = req.body.id;
-    const parametros: NotaInterface = req.body;
+    const userId: string = req.body.idUser;
 
-    const actualiza: UpdateOptions = {
-      where: { id: notaId }, limit: 1,
-    };
-
-    Nota.update(parametros, actualiza)
-      .then(() => res.status(200)
-        .json({ data: "Se ha actualizado la nota con id=" + notaId }))
-      .catch((err: Error) => res.status(500).json(err));
+    if(userId) {
+      const cond = {[Op.and]:[{ idUser: userId },{id: notaId}]};
+      const parametros: NotaInterface = req.body;
+      const actualiza: UpdateOptions = {
+        where: cond, limit: 1,
+      };
+      Nota.update(parametros, actualiza)
+        .then((num) => {
+          if(num[0]!=1) res.status(404).json({ error: "No se ha actualizado la nota con id=" + notaId });
+          else  res.json({ data: "Se ha actualizado la nota con id=" + notaId });
+          })
+        .catch((err: Error) => res.status(500).json(err));
+    } else {
+      res.status(401).json({ errors: "Fallo de Autorización" });
+    }
   }
 
   public delete(req: Request, res: Response) {
     const notaId: string = req.params.id;
+    const userId: string = req.body.idUser;
 
-    const elimina: DestroyOptions = {
-      where: { id: notaId }, limit: 1,
-    };
-
-    Nota.destroy(elimina)
-      .then(() => res.status(200)
-        .json({ data: "Se ha eliminado la nota con id=" + notaId }))
+    if(userId){
+      const cond = {[Op.and]:[{ idUser: userId },{id: notaId}]};
+      const elimina: DestroyOptions = {
+        where: cond, limit: 1,
+      };
+      Nota.destroy(elimina)
+      .then((num) => {
+        if(num != 1) res.status(404).json({ error: "No se ha eliminado la nota con id=" + notaId });
+        else res.json({ data: "Se ha eliminado la nota con id=" + notaId });
+        })
       .catch((err: Error) => res.status(500).json(err));
+    } else {
+      res.status(401).json({ errors: "Fallo de Autorización" });
+    }
   }
 }
 export const notasController = new NotasController;
